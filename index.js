@@ -2,7 +2,6 @@ import express from 'express';
 import multer from 'multer'; // To handle file uploads
 import OpenAI from 'openai';
 import cors from 'cors';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import pdfParse from 'pdf-parse';
 
@@ -15,8 +14,9 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
-// Configure Multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure Multer to store files in memory
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Initialize OpenAI API
 const openai = new OpenAI({
@@ -61,13 +61,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
   try {
     if (file) {
-      // If a new file is uploaded
+      // If a new file is uploaded and stored in memory
       if (file.mimetype === 'application/pdf') {
-        const dataBuffer = fs.readFileSync(file.path);
-        const pdfData = await pdfParse(dataBuffer);
+        const pdfData = await pdfParse(file.buffer);  // Use the buffer from memory
         fileContent = pdfData.text;
       } else {
-        fileContent = fs.readFileSync(file.path, 'utf8');
+        fileContent = file.buffer.toString('utf8'); // Convert buffer to string for text-based files
       }
 
       // Determine the context/topic of the file
